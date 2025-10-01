@@ -1,11 +1,16 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS   # ✅ allow frontend to connect
+from flask_cors import CORS
 import docx2txt
 import pdfplumber
 from skills_data import job_roles, general_skills, skill_resources
+import os
 
+# Create Flask app
 app = Flask(__name__)
-CORS(app)   # ✅ Enable CORS for all routes
+
+# Enable CORS for your frontend only
+# Replace the URL below with your actual frontend Render URL
+CORS(app, origins=["https://resume-analyzer-frontend.onrender.com"])
 
 @app.route('/analyze', methods=['POST'])
 def analyze_resume():
@@ -30,11 +35,10 @@ def analyze_resume():
 
     resume_text = resume_text.lower().strip()
 
-    # 🚨 Stop if resume is empty
     if not resume_text:
         return jsonify({"error": "Could not extract text from resume (maybe scanned PDF)."}), 400
 
-    # Find job role from JD
+    # Determine job role from JD
     matched_role = None
     for role in job_roles.keys():
         if role in jd:
@@ -46,7 +50,7 @@ def analyze_resume():
     if not required_skills:
         required_skills = [s for cat in general_skills.values() for s in cat]
 
-    # Match vs Missing
+    # Match vs Missing skills
     matched = [skill for skill in required_skills if skill in resume_text or skill in jd]
     missing = [skill for skill in required_skills if skill not in matched]
 
@@ -64,4 +68,5 @@ def analyze_resume():
     })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
